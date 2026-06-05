@@ -1,5 +1,5 @@
 <?php
-// includes/footer.php
+//  includes/footer.php
 $siteName = getSetting('site_name') ?: 'Lombok Tourism';
 ?>
 <footer class="footer">
