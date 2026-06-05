@@ -1,5 +1,5 @@
 <?php
-//includes/header.php
+// includes/header.php
 require_once __DIR__ . '/../includes/auth.php';
 $siteName = getSetting('site_name') ?: 'Lombok Tourism';
 $currentUser = getCurrentUser();
