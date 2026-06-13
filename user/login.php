@@ -57,14 +57,6 @@ $pageTitle = 'Masuk - Lombok Tourism';
             </p>
             <div style="background:rgba(255,255,255,.1);border-radius:var(--radius-lg);padding:24px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.15)">
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-                    <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--blue-400),var(--green-400));display:flex;align-items:center;justify-content:center;font-size:1.1rem">🏝️</div>
-                    <div>
-                        <div style="font-weight:700">Admin Demo</div>
-                        <div style="font-size:.8rem;opacity:.7">admin / admin123</div>
-                    </div>
-                </div>
-                <p style="font-size:.82rem;opacity:.7">Gunakan akun di atas untuk mencoba fitur admin dashboard.</p>
-            </div>
         </div>
     </div>
 
