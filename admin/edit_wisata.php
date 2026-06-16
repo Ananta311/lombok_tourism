@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     rating_awal=?, link_lokasi=?, kategori=?, is_featured=?
                 WHERE id=?
             ");
-            $upd->bind_param("ssdssdsiii",
+            $upd->bind_param("ssdssdssii",
                 $nama, $deskripsi, $harga,
                 $jam_buka, $jam_tutup, $rating_awal,
                 $link_lokasi, $kategori, $is_featured,
@@ -280,14 +280,17 @@ $categories = ['Pantai','Gunung','Pulau','Budaya','Alam','Kuliner','Lainnya'];
                         </div>
                     </div>
 
-                        <div class="form-row">
+                    <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Rating Awal</label>
-                            <input type="number" name="rating_awal" class="form-control" min="0" max="5" step="0.1" value="<?= $wisata['rating_awal'] ?>">
+                            <input type="number" name="rating_awal" class="form-control"
+                                   min="0" max="5" step="0.1" value="<?= $wisata['rating_awal'] ?>">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Link Google Maps</label>
-                            <input type="url" name="link_lokasi" class="form-control" value="<?= htmlspecialchars($wisata['link_lokasi']) ?>" placeholder="https://maps.google.com/...">
+                            <input type="url" name="link_lokasi" class="form-control"
+                                   value="<?= htmlspecialchars($wisata['link_lokasi'] ?? '') ?>"
+                                   placeholder="https://maps.google.com/...">
                         </div>
                     </div>
                 </div>

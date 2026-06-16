@@ -3,86 +3,114 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin('../user/login.php');
 
-$db      = getDB();
-$userId  = intval($_SESSION['user_id']);
-$msg     = '';
-$error   = '';
+$db     = getDB();
+$userId = intval($_SESSION['user_id']);
+$msg    = '';
+$error  = '';
 
-/* ── Handle POST ── */
+/* ════════════════════════════════════════════
+   HANDLE POST
+   ════════════════════════════════════════════ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    /* Update profile */
+    /* ── Update profil ── */
     if ($action === 'update_profile') {
         $fullName = sanitize($_POST['full_name'] ?? '');
         $bio      = sanitize($_POST['bio']       ?? '');
         $phone    = sanitize($_POST['phone']     ?? '');
         $location = sanitize($_POST['location']  ?? '');
 
-        // Upload photo
-        $fotoCol = '';
-        if (!empty($_FILES['foto_profile']['name'])) {
+        // Cek apakah ada foto baru
+        $newFoto = null;
+        if (!empty($_FILES['foto_profile']['name']) && $_FILES['foto_profile']['error'] === UPLOAD_ERR_OK) {
             $up = uploadFile($_FILES['foto_profile'], 'profile');
             if (isset($up['error'])) {
                 $error = $up['error'];
             } else {
-                // Delete old photo
+                // Hapus foto lama dari disk
                 $old = $db->query("SELECT foto_profile FROM profile WHERE user_id=$userId")->fetch_assoc();
-                if ($old && $old['foto_profile']) {
+                if ($old && !empty($old['foto_profile'])) {
                     $oldPath = UPLOAD_DIR . $old['foto_profile'];
                     if (file_exists($oldPath)) unlink($oldPath);
                 }
-                $fotoCol = ", foto_profile = '{$up['filename']}'";
+                $newFoto = $up['filename'];
             }
         }
 
         if (!$error) {
-            $stmt = $db->prepare(
-                "UPDATE profile SET full_name=?, bio=?, phone=?, location=? $fotoCol WHERE user_id=?"
-            );
-            $stmt->bind_param("ssssi", $fullName, $bio, $phone, $location, $userId);
-            $stmt->execute();
-            $msg = 'Profil berhasil diperbarui!';
-        }
-    }
-
-    /* Change password */
-    if ($action === 'change_password') {
-        $old  = $_POST['old_password']  ?? '';
-        $new  = $_POST['new_password']  ?? '';
-        $conf = $_POST['confirm_password'] ?? '';
-
-    $user = $db->query("SELECT password FROM users WHERE id=$userId")->fetch_assoc();
-    if (!password_verify($old, $user['password'])) {
-        $error = 'Password lama tidak benar.';
-    } elseif (strlen($new) < 6) {
-        $error = 'Password baru minimal 6 karakter.';
-    } elseif ($new !== $conf) {
-        $error = 'Konfirmasi password tidak cocok.';
-        } else {
-            $hash = password_hash($new, PASSWORD_BCRYPT);
-            $stmt = $db->prepare("UPDATE users SET password=? WHERE id=?");
-             $stmt->bind_param("si", $hash, $userId);
-             
-             if ($stmt->execute()) {
-                $msg = 'Password berhasil diubah!';
-                
-                } else {
-                    $error = 'Gagal mengubah password: ' . $stmt->error;
-                    
-                    }
-                }
+            if ($newFoto !== null) {
+                // Update termasuk foto
+                $stmt = $db->prepare(
+                    "INSERT INTO profile (user_id, full_name, bio, phone, location, foto_profile)
+                     VALUES (?,?,?,?,?,?)
+                     ON DUPLICATE KEY UPDATE
+                       full_name=VALUES(full_name), bio=VALUES(bio),
+                       phone=VALUES(phone), location=VALUES(location),
+                       foto_profile=VALUES(foto_profile)"
+                );
+                $stmt->bind_param("isssss", $userId, $fullName, $bio, $phone, $location, $newFoto);
+            } else {
+                // Update tanpa ganti foto
+                $stmt = $db->prepare(
+                    "INSERT INTO profile (user_id, full_name, bio, phone, location)
+                     VALUES (?,?,?,?,?)
+                     ON DUPLICATE KEY UPDATE
+                       full_name=VALUES(full_name), bio=VALUES(bio),
+                       phone=VALUES(phone), location=VALUES(location)"
+                );
+                $stmt->bind_param("issss", $userId, $fullName, $bio, $phone, $location);
             }
 
-    header('Location: profile.php?msg=' . urlencode($msg) . '&err=' . urlencode($error));
-    exit;
+            if ($stmt->execute()) {
+                $msg = 'Profil berhasil diperbarui!';
+            } else {
+                $error = 'Gagal menyimpan profil: ' . $stmt->error;
+            }
+        }
+
+        header('Location: profile.php?msg=' . urlencode($msg) . '&err=' . urlencode($error));
+        exit;
+    }
+
+    /* ── Ganti password ── */
+    if ($action === 'change_password') {
+        $oldPass  = $_POST['old_password']     ?? '';
+        $newPass  = $_POST['new_password']     ?? '';
+        $confPass = $_POST['confirm_password'] ?? '';
+
+        $userRow = $db->query("SELECT password FROM users WHERE id=$userId")->fetch_assoc();
+
+        if (!$userRow || !password_verify($oldPass, $userRow['password'])) {
+            $error = 'Password lama tidak benar.';
+        } elseif (strlen($newPass) < 6) {
+            $error = 'Password baru minimal 6 karakter.';
+        } elseif ($newPass !== $confPass) {
+            $error = 'Konfirmasi password tidak cocok.';
+        } else {
+            $hash = password_hash($newPass, PASSWORD_BCRYPT);
+            $s    = $db->prepare("UPDATE users SET password=? WHERE id=?");
+            $s->bind_param("si", $hash, $userId);
+            if ($s->execute()) {
+                $msg = 'Password berhasil diubah!';
+            } else {
+                $error = 'Gagal mengubah password.';
+            }
+        }
+
+        header('Location: profile.php?tab=password&msg=' . urlencode($msg) . '&err=' . urlencode($error));
+        exit;
+    }
 }
 
-if (isset($_GET['msg'])) $msg   = $_GET['msg'];
-if (isset($_GET['err'])) $error = $_GET['err'];
+// Baca pesan dari query string
+if (!empty($_GET['msg'])) $msg   = $_GET['msg'];
+if (!empty($_GET['err'])) $error = $_GET['err'];
+$activeTab = $_GET['tab'] ?? 'edit';
 
-/* ── Load data ── */
+/* ── Load data terkini ── */
 $currentUser = getCurrentUser();
+if (!$currentUser) { header('Location: ../user/login.php'); exit; }
 
 $myComments = $db->query("
     SELECT k.*, tw.nama as wisata_nama, tw.id as wisata_id,
@@ -91,130 +119,126 @@ $myComments = $db->query("
     JOIN tempat_wisata tw ON tw.id = k.wisata_id
     LEFT JOIN komentar_foto kf ON kf.komentar_id = k.id
     WHERE k.user_id = $userId
-    GROUP BY k.id
-    ORDER BY k.created_at DESC
-    LIMIT 10
+    GROUP BY k.id ORDER BY k.created_at DESC LIMIT 15
 ")->fetch_all(MYSQLI_ASSOC);
 
 $myRatings = $db->query("
     SELECT r.*, tw.nama as wisata_nama, tw.id as wisata_id
-    FROM rating r
-    JOIN tempat_wisata tw ON tw.id = r.wisata_id
+    FROM rating r JOIN tempat_wisata tw ON tw.id = r.wisata_id
     WHERE r.user_id = $userId
-    ORDER BY r.created_at DESC
-    LIMIT 10
+    ORDER BY r.updated_at DESC LIMIT 15
 ")->fetch_all(MYSQLI_ASSOC);
 
-$pageTitle = 'Profil Saya - Lombok Tourism';
+$pageTitle = 'Profil Saya — Lombok Tourism';
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<style>
-.tab-btn{padding:10px 22px;border:none;background:transparent;font-size:.9rem;font-weight:600;color:var(--gray-500);cursor:pointer;border-bottom:3px solid transparent;transition:var(--transition)}
-.tab-btn.active{color:var(--blue-600);border-color:var(--blue-500)}
-.tab-content{display:none}.tab-content.active{display:block}
-</style>
+<div class="profile-page">
 
-<div style="min-height:100vh;background:var(--gray-50);padding-top:72px">
-<div style="max-width:960px;margin:0 auto;padding:32px 24px">
-
-    <?php if ($msg): ?>
-        <div class="alert alert-success"><i class="fas fa-check-circle"></i> <?= htmlspecialchars($msg) ?></div>
-    <?php endif; ?>
-    <?php if ($error): ?>
-        <div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-
-    <!-- Profile Card -->
-    <div class="profile-card" data-reveal>
-        <div class="profile-cover"></div>
-        <div class="profile-body">
-            <div class="profile-avatar-wrap">
-                <?php if (!empty($currentUser['foto_profile'])): ?>
-                    <img src="<?= BASE_URL ?>uploads/<?= htmlspecialchars($currentUser['foto_profile']) ?>"
-                         class="profile-avatar" alt="Avatar" id="avatarPreview">
-                <?php else: ?>
-                    <div class="profile-avatar-placeholder" id="avatarPlaceholder">
-                        <?= strtoupper(substr($currentUser['username'], 0, 1)) ?>
-                    </div>
-                <?php endif; ?>
-                <div style="padding-bottom:8px">
-                    <h2 class="profile-name">
+<!-- ═══════════ PROFILE HERO BANNER ═══════════ -->
+<div class="profile-hero">
+    <div class="profile-hero-bg"></div>
+    <div class="profile-hero-content">
+        <div class="container">
+            <!-- Avatar + nama di atas banner -->
+            <div class="profile-hero-inner">
+                <div class="profile-avatar-ring">
+                    <?php if (!empty($currentUser['foto_profile'])): ?>
+                        <img src="<?= BASE_URL ?>uploads/<?= htmlspecialchars($currentUser['foto_profile']) ?>"
+                             class="profile-big-avatar" alt="Avatar" id="avatarPreviewImg">
+                    <?php else: ?>
+                        <div class="profile-big-avatar profile-avatar-initials" id="avatarPreviewImg">
+                            <?= strtoupper(substr($currentUser['username'], 0, 1)) ?>
+                        </div>
+                    <?php endif; ?>
+                    <!-- Tombol ganti foto (klik area avatar) -->
+                    <label for="quickFotoInput" class="avatar-edit-btn" title="Ganti foto profil">
+                        <i class="fas fa-camera"></i>
+                    </label>
+                </div>
+                <div class="profile-hero-info">
+                    <h1 class="profile-hero-name">
                         <?= htmlspecialchars($currentUser['full_name'] ?: $currentUser['username']) ?>
-                    </h2>
-                    <p class="profile-username">@<?= htmlspecialchars($currentUser['username']) ?></p>
-                    <span class="badge <?= $currentUser['role']==='admin' ? 'badge-gold':'badge-blue' ?>" style="margin-top:8px">
-                        <i class="fas fa-<?= $currentUser['role']==='admin'?'crown':'user' ?>"></i>
-                        <?= ucfirst($currentUser['role']) ?>
-                    </span>
+                    </h1>
+                    <p class="profile-hero-username">@<?= htmlspecialchars($currentUser['username']) ?></p>
+                    <div class="profile-hero-meta">
+                        <?php if (!empty($currentUser['location'])): ?>
+                            <span><i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($currentUser['location']) ?></span>
+                        <?php endif; ?>
+                        <span><i class="fas fa-envelope"></i> <?= htmlspecialchars($currentUser['email']) ?></span>
+                        <span><i class="fas fa-calendar-alt"></i> Bergabung <?= date('M Y', strtotime($currentUser['created_at'])) ?></span>
+                    </div>
+                </div>
+                <div class="profile-hero-stats">
+                    <div class="profile-stat-box">
+                        <div class="profile-stat-num"><?= count($myComments) ?></div>
+                        <div class="profile-stat-label">Komentar</div>
+                    </div>
+                    <div class="profile-stat-box">
+                        <div class="profile-stat-num"><?= count($myRatings) ?></div>
+                        <div class="profile-stat-label">Rating</div>
+                    </div>
+                    <div class="profile-stat-box">
+                        <span class="badge <?= $currentUser['role']==='admin'?'badge-gold':'badge-blue' ?>" style="font-size:.82rem">
+                            <i class="fas fa-<?= $currentUser['role']==='admin'?'crown':'user' ?>"></i>
+                            <?= ucfirst($currentUser['role']) ?>
+                        </span>
+                        <div class="profile-stat-label">Role</div>
+                    </div>
                 </div>
             </div>
 
             <?php if (!empty($currentUser['bio'])): ?>
-                <p class="profile-bio"><?= nl2br(htmlspecialchars($currentUser['bio'])) ?></p>
+            <p class="profile-hero-bio"><?= nl2br(htmlspecialchars($currentUser['bio'])) ?></p>
             <?php endif; ?>
-
-            <div class="profile-meta">
-                <?php if (!empty($currentUser['location'])): ?>
-                    <span class="profile-meta-item"><i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($currentUser['location']) ?></span>
-                <?php endif; ?>
-                <?php if (!empty($currentUser['phone'])): ?>
-                    <span class="profile-meta-item"><i class="fas fa-phone"></i> <?= htmlspecialchars($currentUser['phone']) ?></span>
-                <?php endif; ?>
-                <span class="profile-meta-item">
-                    <i class="fas fa-envelope"></i> <?= htmlspecialchars($currentUser['email']) ?>
-                </span>
-                <span class="profile-meta-item">
-                    <i class="fas fa-calendar"></i>
-                    Bergabung <?= date('M Y', strtotime($currentUser['created_at'])) ?>
-                </span>
-            </div>
-
-            <!-- Stats row -->
-            <div style="display:flex;gap:24px;margin-top:20px;padding-top:20px;border-top:1px solid var(--gray-100);flex-wrap:wrap">
-                <div style="text-align:center">
-                    <div style="font-family:var(--font-display);font-size:1.4rem;font-weight:800;color:var(--gray-900)"><?= count($myComments) ?></div>
-                    <div style="font-size:.78rem;color:var(--gray-400)">Komentar</div>
-                </div>
-                <div style="text-align:center">
-                    <div style="font-family:var(--font-display);font-size:1.4rem;font-weight:800;color:var(--gray-900)"><?= count($myRatings) ?></div>
-                    <div style="font-size:.78rem;color:var(--gray-400)">Rating Diberikan</div>
-                </div>
-            </div>
         </div>
     </div>
+</div>
 
-    <!-- Tabs -->
-    <div style="background:white;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);overflow:hidden;margin-top:24px" data-reveal>
-        <div style="display:flex;border-bottom:1px solid var(--gray-100);padding:0 24px;gap:4px;overflow-x:auto">
-            <button class="tab-btn active" onclick="switchTab('edit')"><i class="fas fa-edit"></i> Edit Profil</button>
-            <button class="tab-btn" onclick="switchTab('password')"><i class="fas fa-lock"></i> Ubah Password</button>
-            <button class="tab-btn" onclick="switchTab('activity')"><i class="fas fa-history"></i> Aktivitas</button>
+<!-- ═══════════ MAIN CONTENT ═══════════ -->
+<div class="container" style="padding-top:32px;padding-bottom:64px">
+
+    <!-- Alert -->
+    <?php if ($msg): ?>
+        <div class="alert alert-success" style="max-width:760px;margin:0 auto 20px">
+            <i class="fas fa-check-circle"></i> <?= htmlspecialchars($msg) ?>
+        </div>
+    <?php endif; ?>
+    <?php if ($error): ?>
+        <div class="alert alert-danger" style="max-width:760px;margin:0 auto 20px">
+            <i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($error) ?>
+        </div>
+    <?php endif; ?>
+
+    <!-- Tab Card -->
+    <div class="profile-tab-card" style="max-width:760px;margin:0 auto">
+
+        <!-- Tab nav -->
+        <div class="profile-tab-nav">
+            <button class="ptab <?= $activeTab==='edit'?'active':'' ?>"
+                    onclick="switchPTab('edit',this)">
+                <i class="fas fa-user-edit"></i> Edit Profil
+            </button>
+            <button class="ptab <?= $activeTab==='password'?'active':'' ?>"
+                    onclick="switchPTab('password',this)">
+                <i class="fas fa-lock"></i> Password
+            </button>
+            <button class="ptab <?= $activeTab==='activity'?'active':'' ?>"
+                    onclick="switchPTab('activity',this)">
+                <i class="fas fa-history"></i> Aktivitas
+            </button>
         </div>
 
-        <!-- Tab: Edit Profile -->
-        <div class="tab-content active" id="tab-edit" style="padding:32px">
-            <form method="POST" enctype="multipart/form-data">
+        <!-- ── Tab Edit Profil ── -->
+        <div class="ptab-content <?= $activeTab==='edit'?'active':'' ?>" id="ptab-edit">
+            <form method="POST" enctype="multipart/form-data" action="profile.php">
                 <input type="hidden" name="action" value="update_profile">
 
-                <!-- Photo upload -->
-                <div style="margin-bottom:28px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
-                    <div style="position:relative">
-                        <img id="photoPreviewImg"
-                             src="<?= !empty($currentUser['foto_profile']) ? BASE_URL.'uploads/'.htmlspecialchars($currentUser['foto_profile']) : 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect fill=%22%23e2e8f0%22 width=%22100%22 height=%22100%22/><text y=%2250%22 x%2250%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 font-size=%2240%22>👤</text></svg>' ?>"
-                             style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:4px solid var(--blue-100)">
-                        <label for="fotoInput"
-                               style="position:absolute;bottom:0;right:0;width:28px;height:28px;background:var(--blue-500);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid white">
-                            <i class="fas fa-camera" style="color:white;font-size:.65rem"></i>
-                        </label>
-                        <input type="file" id="fotoInput" name="foto_profile" accept="image/*" style="display:none"
-                               onchange="previewPhoto(this)">
-                    </div>
-                    <div>
-                        <p style="font-weight:600;color:var(--gray-800);margin-bottom:4px">Foto Profil</p>
-                        <p style="font-size:.82rem;color:var(--gray-400)">JPG, PNG, WebP – maks. 5MB</p>
-                    </div>
-                </div>
+                <!-- Upload foto di dalam form -->
+                <input type="file" id="quickFotoInput" name="foto_profile" accept="image/*"
+                       style="display:none" onchange="previewAvatar(this)">
+
+                <!-- Klik avatar di hero juga bisa trigger ini lewat JS -->
 
                 <div class="form-row">
                     <div class="form-group">
@@ -232,7 +256,7 @@ include __DIR__ . '/../includes/header.php';
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Lokasi / Kota</label>
+                    <label class="form-label">Kota / Lokasi</label>
                     <input type="text" name="location" class="form-control"
                            value="<?= htmlspecialchars($currentUser['location'] ?? '') ?>"
                            placeholder="Contoh: Mataram, NTB">
@@ -242,38 +266,63 @@ include __DIR__ . '/../includes/header.php';
                     <label class="form-label">Bio</label>
                     <textarea name="bio" class="form-control" rows="4"
                               placeholder="Ceritakan sedikit tentang diri Anda..."><?= htmlspecialchars($currentUser['bio'] ?? '') ?></textarea>
-                    <p class="form-hint">Maksimal 500 karakter</p>
+                    <p class="form-hint">Tampil di halaman profil Anda</p>
                 </div>
 
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Simpan Perubahan
-                </button>
+                <!-- Foto profil preview inline -->
+                <div class="foto-upload-inline">
+                    <div class="foto-upload-preview" id="fotoPreviewBox">
+                        <?php if (!empty($currentUser['foto_profile'])): ?>
+                            <img src="<?= BASE_URL ?>uploads/<?= htmlspecialchars($currentUser['foto_profile']) ?>"
+                                 id="fotoPreviewInline" alt="">
+                        <?php else: ?>
+                            <div class="foto-placeholder" id="fotoPreviewInline">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    <div>
+                        <label for="quickFotoInput" class="btn btn-outline btn-sm" style="cursor:pointer">
+                            <i class="fas fa-camera"></i> Pilih Foto Profil
+                        </label>
+                        <p class="form-hint" style="margin-top:6px">JPG, PNG, WebP — maks. 5MB</p>
+                        <p id="selectedFileName" style="font-size:.78rem;color:var(--blue-600);margin-top:4px;display:none"></p>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:12px;margin-top:8px">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Simpan Perubahan
+                    </button>
+                </div>
             </form>
         </div>
 
-        <!-- Tab: Change Password -->
-        <div class="tab-content" id="tab-password" style="padding:32px">
-            <form method="POST" style="max-width:480px">
+        <!-- ── Tab Ganti Password ── -->
+        <div class="ptab-content <?= $activeTab==='password'?'active':'' ?>" id="ptab-password">
+            <form method="POST" action="profile.php">
                 <input type="hidden" name="action" value="change_password">
                 <div class="form-group">
                     <label class="form-label">Password Lama <span>*</span></label>
                     <div class="input-group">
-                        <input type="password" name="old_password" class="form-control" required>
+                        <input type="password" name="old_password" class="form-control" required
+                               placeholder="Masukkan password saat ini">
                         <button type="button" class="input-toggle"><i class="fas fa-eye"></i></button>
                     </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Password Baru <span>*</span></label>
                     <div class="input-group">
-                        <input type="password" name="new_password" class="form-control" required minlength="6">
+                        <input type="password" name="new_password" class="form-control" required minlength="6"
+                               placeholder="Min. 6 karakter">
                         <button type="button" class="input-toggle"><i class="fas fa-eye"></i></button>
                     </div>
-                    <p class="form-hint">Minimal 6 karakter</p>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Konfirmasi Password Baru <span>*</span></label>
                     <div class="input-group">
-                        <input type="password" name="confirm_password" class="form-control" required>
+                        <input type="password" name="confirm_password" class="form-control" required
+                               placeholder="Ulangi password baru">
                         <button type="button" class="input-toggle"><i class="fas fa-eye"></i></button>
                     </div>
                 </div>
@@ -283,82 +332,113 @@ include __DIR__ . '/../includes/header.php';
             </form>
         </div>
 
-        <!-- Tab: Activity -->
-        <div class="tab-content" id="tab-activity" style="padding:32px">
-            <h4 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:20px">Komentar Saya</h4>
+        <!-- ── Tab Aktivitas ── -->
+        <div class="ptab-content <?= $activeTab==='activity'?'active':'' ?>" id="ptab-activity">
+
+            <h4 class="activity-section-title">
+                <i class="fas fa-comments" style="color:var(--blue-400)"></i> Komentar Saya
+                <span class="badge badge-blue"><?= count($myComments) ?></span>
+            </h4>
+
             <?php if (empty($myComments)): ?>
-                <p style="color:var(--gray-400);text-align:center;padding:30px">
-                    <i class="fas fa-comment-slash" style="font-size:2rem;display:block;margin-bottom:10px"></i>
-                    Belum ada komentar
-                </p>
+                <div class="activity-empty">
+                    <i class="fas fa-comment-slash"></i>
+                    <p>Belum ada komentar</p>
+                </div>
             <?php else: ?>
                 <?php foreach ($myComments as $c): ?>
-                <div style="padding:16px;border:1px solid var(--gray-100);border-radius:var(--radius-md);margin-bottom:12px">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px">
-                        <a href="../detail.php?id=<?= $c['wisata_id'] ?>" style="font-weight:700;color:var(--blue-600);font-size:.9rem">
+                <div class="activity-item">
+                    <div class="activity-item-header">
+                        <a href="../detail.php?id=<?= $c['wisata_id'] ?>" class="activity-wisata-link">
                             <i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($c['wisata_nama']) ?>
                         </a>
                         <div style="display:flex;align-items:center;gap:8px">
                             <?php if ($c['foto_count']): ?>
-                                <span class="badge badge-blue"><i class="fas fa-camera"></i> <?= $c['foto_count'] ?> foto</span>
+                                <span class="badge badge-blue" style="font-size:.72rem">
+                                    <i class="fas fa-camera"></i> <?= $c['foto_count'] ?>
+                                </span>
                             <?php endif; ?>
-                            <span style="font-size:.78rem;color:var(--gray-400)"><?= date('d M Y', strtotime($c['created_at'])) ?></span>
+                            <span class="activity-date"><?= date('d M Y', strtotime($c['created_at'])) ?></span>
                         </div>
                     </div>
-                    <p style="color:var(--gray-700);font-size:.88rem;line-height:1.6"><?= htmlspecialchars(mb_substr($c['komentar'], 0, 180)) ?><?= mb_strlen($c['komentar'])>180?'…':'' ?></p>
+                    <p class="activity-text"><?= htmlspecialchars(mb_substr($c['komentar'], 0, 200)) ?><?= mb_strlen($c['komentar'])>200?'…':'' ?></p>
                 </div>
                 <?php endforeach; ?>
             <?php endif; ?>
 
-            <h4 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin:28px 0 16px">Rating Saya</h4>
+            <h4 class="activity-section-title" style="margin-top:32px">
+                <i class="fas fa-star" style="color:var(--gold)"></i> Rating Saya
+                <span class="badge badge-gold"><?= count($myRatings) ?></span>
+            </h4>
+
             <?php if (empty($myRatings)): ?>
-                <p style="color:var(--gray-400);text-align:center;padding:30px">
-                    <i class="fas fa-star" style="font-size:2rem;display:block;margin-bottom:10px"></i>
-                    Belum ada rating
-                </p>
+                <div class="activity-empty">
+                    <i class="fas fa-star"></i>
+                    <p>Belum ada rating</p>
+                </div>
             <?php else: ?>
-                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
                     <?php foreach ($myRatings as $r): ?>
-                    <div style="padding:16px;border:1px solid var(--gray-100);border-radius:var(--radius-md);background:var(--gray-50)">
-                        <a href="../detail.php?id=<?= $r['wisata_id'] ?>" style="font-weight:700;color:var(--blue-600);font-size:.9rem;display:block;margin-bottom:8px">
-                            <?= htmlspecialchars($r['wisata_nama']) ?>
-                        </a>
-                        <div style="color:var(--gold);font-size:1rem">
+                    <a href="../detail.php?id=<?= $r['wisata_id'] ?>" class="rating-activity-card">
+                        <div class="rating-activity-name"><?= htmlspecialchars($r['wisata_nama']) ?></div>
+                        <div class="rating-stars-display">
                             <?= str_repeat('★', $r['rating']) ?><?= str_repeat('☆', 5-$r['rating']) ?>
                         </div>
-                        <div style="font-size:.78rem;color:var(--gray-400);margin-top:4px"><?= date('d M Y', strtotime($r['created_at'])) ?></div>
-                    </div>
+                        <div class="activity-date"><?= date('d M Y', strtotime($r['updated_at'])) ?></div>
+                    </a>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
         </div>
-    </div>
 
+    </div><!-- end profile-tab-card -->
 </div>
-</div>
-
-<!-- Lightbox -->
-<div class="lightbox" id="lightbox">
-    <div class="lightbox-inner">
-        <button class="lightbox-close" id="lightboxClose"><i class="fas fa-times"></i></button>
-        <img src="" id="lightboxImg" alt="">
-    </div>
-</div>
+</div><!-- end profile-page -->
 
 <script>
-function switchTab(name) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-    event.target.classList.add('active');
+function switchPTab(name, btn) {
+    document.querySelectorAll('.ptab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.ptab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('ptab-' + name).classList.add('active');
 }
-function previewPhoto(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = e => {
-            document.getElementById('photoPreviewImg').src = e.target.result;
-        };
-        reader.readAsDataURL(input.files[0]);
+
+function previewAvatar(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        // Update avatar di hero
+        const heroAvatar = document.getElementById('avatarPreviewImg');
+        if (heroAvatar.tagName === 'IMG') {
+            heroAvatar.src = e.target.result;
+        } else {
+            // placeholder div → ganti dengan img
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'profile-big-avatar';
+            img.id = 'avatarPreviewImg';
+            heroAvatar.replaceWith(img);
+        }
+        // Update preview inline
+        const inlinePreview = document.getElementById('fotoPreviewInline');
+        if (inlinePreview) {
+            if (inlinePreview.tagName === 'IMG') {
+                inlinePreview.src = e.target.result;
+            } else {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.id = 'fotoPreviewInline';
+                inlinePreview.replaceWith(img);
+            }
+        }
+    };
+    reader.readAsDataURL(input.files[0]);
+
+    // Tampilkan nama file
+    const fn = document.getElementById('selectedFileName');
+    if (fn) {
+        fn.textContent = '📎 ' + input.files[0].name;
+        fn.style.display = 'block';
     }
 }
 </script>
