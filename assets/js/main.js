@@ -234,4 +234,39 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     document.querySelectorAll('[data-count]').forEach(el => counterObserver.observe(el));
 
-    
+    // ============ TOAST NOTIFICATION ============
+    window.showToast = function (msg, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type}`;
+        toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;min-width:280px;animation:fadeInUp 0.3s ease';
+        toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'}"></i> ${msg}`;
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = '0.3s'; setTimeout(() => toast.remove(), 300); }, 3000);
+    };
+
+    // ============ CONFIRM DELETE ============
+    document.querySelectorAll('[data-confirm]').forEach(el => {
+        el.addEventListener('click', e => {
+            if (!confirm(el.dataset.confirm || 'Yakin ingin menghapus?')) e.preventDefault();
+        });
+    });
+
+    // ============ PARTICLES (hero decorative) ============
+    const particleContainer = document.getElementById('heroParticles');
+    if (particleContainer) {
+        for (let i = 0; i < 16; i++) {
+            const p = document.createElement('div');
+            const size = Math.random() * 5 + 2;
+            p.style.cssText = `
+                position:absolute;
+                width:${size}px; height:${size}px;
+                background:rgba(255,255,255,${Math.random() * 0.25 + 0.05});
+                border-radius:50%;
+                left:${Math.random() * 100}%;
+                top:${Math.random() * 100}%;
+                animation:float ${Math.random() * 4 + 3}s ease-in-out ${Math.random() * 2}s infinite;
+            `;
+            particleContainer.appendChild(p);
+        }
+    }
+});
