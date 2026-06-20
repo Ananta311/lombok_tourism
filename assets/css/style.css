@@ -1272,3 +1272,84 @@ textarea.form-control { resize: vertical; min-height: 120px; }
     border-radius: 10px;
 }
 
+/* ============================================================
+   COMMENT ITEMS
+   ============================================================ */
+.comment-item {
+    background: white;
+    border: 1px solid rgba(0,0,0,.06);
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+    transition: box-shadow .3s;
+}
+.comment-item:hover { box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+
+/* ============================================================
+   STAR RATING — bigger & smoother
+   ============================================================ */
+.star-rating i {
+    font-size: 2rem;
+    transition: color .15s, transform .2s cubic-bezier(.34,1.56,.64,1);
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.1));
+}
+.star-rating i.active  { color: var(--gold); transform: scale(1.2); }
+.star-rating i.hover   { color: #ffcf40; transform: scale(1.25); }
+
+/* ============================================================
+   FOOTER — subtle gradient border top
+   ============================================================ */
+.footer {
+    border-top: 2px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+}
+.footer::before {
+    content:'';
+    position:absolute; top:-2px; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, var(--blue-500), var(--green-400), var(--blue-500));
+}
+
+/* ============================================================
+   CATEGORY CARDS — icon glow on hover
+   ============================================================ */
+.category-card:hover .category-icon {
+    box-shadow: 0 8px 20px rgba(33,150,196,.25);
+    transform: scale(1.08);
+    transition: transform .3s, box-shadow .3s;
+}
+.category-icon { transition: transform .3s, box-shadow .3s; }
+
+/* ============================================================
+   SCROLL REVEAL — smoother easing
+   ============================================================ */
+[data-reveal] {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity .65s cubic-bezier(.22,1,.36,1), transform .65s cubic-bezier(.22,1,.36,1);
+}
+[data-reveal].revealed { opacity:1; transform:translateY(0); }
+
+/* ============================================================
+   ADMIN SIDEBAR — polished active state
+   ============================================================ */
+.sidebar-link.active {
+    background: linear-gradient(135deg, rgba(33,150,196,.25) 0%, rgba(58,155,102,.15) 100%);
+    border-left: 3px solid var(--blue-400);
+    color: white;
+    padding-left: 11px;
+}
+.admin-sidebar { border-right: 1px solid rgba(255,255,255,.06); }
+
+/* ============================================================
+   LOADING SKELETON (for future use)
+   ============================================================ */
+@keyframes shimmer {
+    0%   { background-position: -800px 0; }
+    100% { background-position:  800px 0; }
+}
+.skeleton {
+    background: linear-gradient(90deg, var(--gray-100) 25%, var(--gray-50) 50%, var(--gray-100) 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: var(--radius-sm);
+}
