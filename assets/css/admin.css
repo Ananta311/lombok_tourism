@@ -1,0 +1,32 @@
+/* admin.css — admin-specific overrides */
+body.admin-body { background: var(--gray-50); }
+
+@media (max-width:1024px) {
+    .admin-sidebar {
+        position: fixed; left:0; top:0; bottom:0; z-index:200;
+        transform: translateX(-260px); transition: transform .3s;
+    }
+    .admin-sidebar.open { transform: translateX(0); }
+    .admin-main { margin-left: 0 !important; }
+    #adminSidebarToggle { display: block !important; }
+    .admin-content { padding: 20px; }
+}
+
+.admin-topbar { position: sticky; top:0; z-index:100; }
+.admin-main { display: flex; flex-direction: column; min-height: 100vh; }
+.admin-content { flex: 1; }
+
+/* Rich text / quill placeholder */
+.ql-editor { min-height: 160px; font-family: var(--font-body); font-size: .95rem; }
+
+/* Image list in admin */
+.admin-photo-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px; border: 1px solid var(--gray-100); border-radius: var(--radius-md);
+    margin-bottom: 8px; background: white;
+}
+.admin-photo-item img { width: 60px; height: 60px; object-fit: cover; border-radius: var(--radius-sm); }
+.admin-photo-item .primary-badge {
+    font-size:.7rem; padding:2px 8px; border-radius:999px;
+    background:var(--green-100); color:var(--green-700); font-weight:700;
+}
