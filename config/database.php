@@ -70,3 +70,31 @@ function getAvgRating($wisataId) {
     $result = $db->query("SELECT AVG(rating) as avg_r, COUNT(*) as total FROM rating WHERE wisata_id = $wisataId")->fetch_assoc();
     return $result;
 }
+
+// Helper: Average hotel rating
+function getAvgHotelRating($hotelId) {
+    $db = getDB();
+    $hotelId = intval($hotelId);
+    $result = $db->query("SELECT AVG(rating) as avg_r, COUNT(*) as total FROM hotel_rating WHERE hotel_id = $hotelId")->fetch_assoc();
+    return $result;
+}
+
+// Helper: Average restoran rating
+function getAvgRestoranRating($restoranId) {
+    $db = getDB();
+    $restoranId = intval($restoranId);
+    $result = $db->query("SELECT AVG(rating) as avg_r, COUNT(*) as total FROM restoran_rating WHERE restoran_id = $restoranId")->fetch_assoc();
+    return $result;
+}
+
+// Helper: Validasi link Google Maps sebelum ditampilkan sebagai tombol
+function hasMapsLink($link) {
+    return !empty($link) && filter_var($link, FILTER_VALIDATE_URL) !== false;
+}
+
+// Helper: Render bintang rating (★★★★☆ style) sebagai HTML string aman
+function renderStars($avg) {
+    $avg = round(floatval($avg));
+    $avg = max(0, min(5, $avg));
+    return str_repeat('★', $avg) . str_repeat('☆', 5 - $avg);
+}

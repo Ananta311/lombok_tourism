@@ -157,22 +157,6 @@ include __DIR__ . '/admin_header.php';
                     </div>
                 </form>
             </div>
-
-            <!-- Preview beranda -->
-            <div class="form-card" style="background:var(--green-100);border:1px solid var(--green-200)">
-                <h4 style="font-size:.88rem;font-weight:700;color:var(--green-800);margin-bottom:12px">
-                    <i class="fas fa-desktop"></i> Cara Mengganti Background
-                </h4>
-                <ol style="font-size:.82rem;color:var(--green-700);line-height:2;padding-left:18px">
-                    <li>Pilih gambar berkualitas tinggi (min. 1920×1080px)</li>
-                    <li>Format yang direkomendasikan: JPG atau WebP</li>
-                    <li>Klik tombol <strong>Upload Background</strong></li>
-                    <li>Perubahan langsung tampil di halaman beranda</li>
-                    <li>Gunakan <strong>Hapus</strong> untuk kembali ke gradien default</li>
-                </ol>
-                <a href="../index.php" target="_blank" class="btn btn-green btn-sm" style="margin-top:8px">
-                    <i class="fas fa-eye"></i> Lihat Beranda
-                </a>
             </div>
         </div>
     </div>

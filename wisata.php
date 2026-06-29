@@ -53,10 +53,10 @@ $categories = $db->query("SELECT DISTINCT kategori FROM tempat_wisata ORDER BY k
 include __DIR__ . '/includes/header.php';
 ?>
 
-<div style="min-height:100vh; padding-top:0px; background:var(--gray-50);">
+<div style="min-height:100vh; padding-top:80px; background:var(--gray-50);">
 
     <!-- Page header -->
-    <div style="background:linear-gradient(135deg, var(--blue-800), var(--blue-600)); padding:80px 24px 60px; color:white;">
+    <div style="background:linear-gradient(135deg, var(--blue-800), var(--blue-600)); padding:56px 24px 40px; color:white;">
         <div class="container">
             <div style="font-size:0.82rem; opacity:0.7; margin-bottom:8px">
                 <a href="index.php" style="color:inherit">Beranda</a> › Wisata

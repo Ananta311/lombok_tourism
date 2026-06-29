@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $ins->bind_param(
-            "ssdssdsiii",
+            "ssdssdssii",
             $nama, $deskripsi, $harga,
             $jam_buka, $jam_tutup, $rating_awal,
             $link_lokasi, $kategori, $is_featured, $adminId
@@ -174,9 +174,11 @@ $categories = ['Pantai','Gunung','Pulau','Budaya','Alam','Kuliner','Lainnya'];
                             <input type="url" name="link_lokasi" class="form-control"
                                    value="<?= htmlspecialchars($_POST['link_lokasi'] ?? '') ?>"
                                    placeholder="https://maps.google.com/...">
+                            <p class="form-hint">Salin link dari tombol "Bagikan" di Google Maps</p>
                         </div>
                     </div>
                 </div>
+
 
                 <!-- Photo upload -->
                 <div class="form-card">
@@ -213,20 +215,6 @@ $categories = ['Pantai','Gunung','Pulau','Budaya','Alam','Kuliner','Lainnya'];
                         <p class="form-hint">Wisata unggulan tampil di halaman beranda</p>
                     </div>
                 </div>
-
-                <div class="form-card" style="background:var(--blue-50);border:1px solid var(--blue-100)">
-                    <h4 style="font-size:.88rem;font-weight:700;color:var(--blue-800);margin-bottom:12px">
-                        <i class="fas fa-lightbulb"></i> Tips Pengisian
-                    </h4>
-                    <ul style="font-size:.82rem;color:var(--blue-700);line-height:1.9;padding-left:16px">
-                        <li>Gunakan nama yang mudah dikenali</li>
-                        <li>Deskripsi yang detail menarik lebih banyak pengunjung</li>
-                        <li>Upload foto berkualitas tinggi (min. 800×600px)</li>
-                        <li>Isi link Maps agar user mudah menemukan lokasi</li>
-                        <li>Foto pertama = foto utama yang tampil di kartu</li>
-                    </ul>
-                </div>
-
                 <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
                     <button type="submit" class="btn btn-primary btn-lg" style="justify-content:center">
                         <i class="fas fa-plus-circle"></i> Simpan Wisata

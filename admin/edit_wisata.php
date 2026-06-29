@@ -291,6 +291,7 @@ $categories = ['Pantai','Gunung','Pulau','Budaya','Alam','Kuliner','Lainnya'];
                             <input type="url" name="link_lokasi" class="form-control"
                                    value="<?= htmlspecialchars($wisata['link_lokasi'] ?? '') ?>"
                                    placeholder="https://maps.google.com/...">
+                            <p class="form-hint">Salin link dari tombol "Bagikan" di Google Maps</p>
                         </div>
                     </div>
                 </div>

@@ -9,6 +9,8 @@ $totalWisata  = $db->query("SELECT COUNT(*) FROM tempat_wisata")->fetch_row()[0]
 $totalUser    = $db->query("SELECT COUNT(*) FROM users WHERE role='user'")->fetch_row()[0];
 $totalKomentar= $db->query("SELECT COUNT(*) FROM komentar")->fetch_row()[0];
 $totalFoto    = $db->query("SELECT COUNT(*) FROM wisata_foto")->fetch_row()[0];
+$totalHotel   = $db->query("SELECT COUNT(*) FROM hotel")->fetch_row()[0];
+$totalRestoran= $db->query("SELECT COUNT(*) FROM restoran")->fetch_row()[0];
 
 $latestWisata = $db->query("
     SELECT tw.*, wf.foto as foto_utama,
@@ -69,6 +71,20 @@ include __DIR__ . '/admin_header.php';
             <div>
                 <div class="stat-number" data-count="<?= $totalFoto ?>">0</div>
                 <div class="stat-label">Total Foto</div>
+            </div>
+        </div>
+        <div class="stat-card" data-reveal data-delay="4">
+            <div class="stat-icon" style="background:var(--cyan-100);color:var(--cyan-700)"><i class="fas fa-hotel"></i></div>
+            <div>
+                <div class="stat-number" data-count="<?= $totalHotel ?>">0</div>
+                <div class="stat-label">Total Hotel</div>
+            </div>
+        </div>
+        <div class="stat-card" data-reveal data-delay="5">
+            <div class="stat-icon green"><i class="fas fa-utensils"></i></div>
+            <div>
+                <div class="stat-number" data-count="<?= $totalRestoran ?>">0</div>
+                <div class="stat-label">Total Restoran</div>
             </div>
         </div>
     </div>

@@ -5,23 +5,36 @@
    ============================================ */
 
 :root {
+    /* ── Warna Brand Resmi ──
+       Langit = #0EA5E9 | Laut = #06B6D4 | Alam/Daun = #22C55E
+       Diturunkan jadi skala penuh agar tetap kompatibel dengan
+       semua komponen yang sudah memakai var(--blue-*) / var(--green-*) */
     --blue-900: #0c2340;
     --blue-800: #0f3460;
-    --blue-700: #1a4f82;
-    --blue-600: #1d6fa4;
-    --blue-500: #2196c4;
-    --blue-400: #38b2d8;
-    --blue-300: #7ecfe8;
+    --blue-700: #0c6f9e;
+    --blue-600: #0d8bc0;
+    --blue-500: #0EA5E9;   /* Langit — warna utama */
+    --blue-400: #38bdf0;
+    --blue-300: #7dd3f5;
+    --blue-200: #a8e2f8;
     --blue-100: #e0f4fb;
     --blue-50:  #f0fafd;
 
-    --green-800: #1a4731;
-    --green-700: #1e5c3a;
-    --green-600: #2d7a52;
-    --green-500: #3a9b66;
-    --green-400: #4aba7a;
-    --green-300: #7dd4a0;
-    --green-100: #e2f5eb;
+    /* Laut — dipakai sebagai warna aksen kedua (cyan) */
+    --cyan-700: #0a7e91;
+    --cyan-600: #0891a8;
+    --cyan-500: #06B6D4;
+    --cyan-400: #38d4ec;
+    --cyan-100: #cffafe;
+
+    --green-800: #166534;
+    --green-700: #15803d;
+    --green-600: #16a34a;
+    --green-500: #22C55E;  /* Alam/Daun — warna utama hijau */
+    --green-400: #4ade80;
+    --green-300: #86efac;
+    --green-200: #bbf7d0;
+    --green-100: #dcfce7;
 
     --white:   #ffffff;
     --gray-50: #f8fafc;
@@ -44,7 +57,7 @@
     --shadow-md:  0 4px 16px rgba(0,0,0,0.1);
     --shadow-lg:  0 10px 40px rgba(0,0,0,0.15);
     --shadow-xl:  0 20px 60px rgba(0,0,0,0.2);
-    --shadow-blue: 0 8px 30px rgba(33,150,196,0.3);
+    --shadow-blue: 0 8px 30px rgba(14,165,233,0.3);
 
     --radius-sm: 6px;
     --radius-md: 12px;
@@ -57,6 +70,11 @@
 
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* Glassmorphism ringan — dipakai di card hotel/restoran & navbar */
+    --glass-bg: rgba(255,255,255,0.65);
+    --glass-border: rgba(255,255,255,0.35);
+    --glass-blur: blur(16px) saturate(160%);
 }
 
 /* ============================================ RESET & BASE */
@@ -86,7 +104,7 @@ input, textarea, select { font-family: inherit; }
 .navbar {
     position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
     padding: 0;
-    background: transparent;
+    background: rgba(12,35,64,0.97);
     transition: var(--transition);
 }
 .navbar.scrolled {
@@ -178,6 +196,18 @@ input, textarea, select { font-family: inherit; }
     width: 24px; height: 2px; background: white; border-radius: 2px;
     transition: var(--transition); display: block;
 }
+/* Hamburger → X animation when menu is open */
+.nav-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-toggle.open span:nth-child(2) { opacity: 0; }
+.nav-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* Darkened backdrop behind the off-canvas mobile menu */
+.nav-overlay {
+    position: fixed; inset: 0; background: rgba(8,20,38,0.55);
+    opacity: 0; visibility: hidden; transition: var(--transition);
+    z-index: 998; /* below nav-menu drawer, above page content */
+}
+.nav-overlay.open { opacity: 1; visibility: visible; }
 
 /* ============================================ HERO */
 .hero {
@@ -961,13 +991,13 @@ textarea.form-control { resize: vertical; min-height: 120px; }
 [data-reveal].revealed { opacity: 1; transform: translateY(0); }
 
 /* ============================================ RESPONSIVE */
-@media (max-width: 1024px) {
-    .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
-    .admin-sidebar { transform: translateX(-260px); }
-    .admin-sidebar.open { transform: translateX(0); }
-    .admin-main { margin-left: 0; }
-}
-@media (max-width: 768px) {
+
+/* Navbar collapses to off-canvas drawer + search moves with it.
+   Threshold is wider (1200px) than typical tablet breakpoints because
+   the navbar now carries more items (Wisata/Hotel/Restoran/Admin/User)
+   plus the global search bar — collapsing too late causes overflow
+   on common 1024-1200px laptop screens, especially when logged in. */
+@media (max-width: 1200px) {
     .nav-menu {
         position: fixed; top: 0; right: 0; bottom: 0;
         width: 280px; background: var(--blue-900);
@@ -975,6 +1005,7 @@ textarea.form-control { resize: vertical; min-height: 120px; }
         padding: 80px 20px 40px;
         transform: translateX(100%); transition: transform 0.35s;
         box-shadow: var(--shadow-xl);
+        overflow-y: auto;
     }
     .nav-menu.open { transform: translateX(0); }
     .nav-toggle { display: flex; z-index: 2; }
@@ -983,6 +1014,22 @@ textarea.form-control { resize: vertical; min-height: 120px; }
     .dropdown-menu { position: static; opacity: 1; visibility: visible; transform: none; box-shadow: none; background: rgba(255,255,255,0.08); }
     .dropdown-menu a { color: rgba(255,255,255,0.8); }
     .dropdown-menu a:hover { background: rgba(255,255,255,0.1); color: white; }
+
+    /* Search bar moves into the drawer at this same breakpoint —
+       prevents the old bug where two search boxes rendered at once */
+    .global-search-wrap:not(.mobile-search) { display:none; }
+    .global-search-wrap.mobile-search {
+        display:block; margin:0; max-width:none; width:100%;
+    }
+}
+
+@media (max-width: 1024px) {
+    .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+    .admin-sidebar { transform: translateX(-260px); }
+    .admin-sidebar.open { transform: translateX(0); }
+    .admin-main { margin-left: 0; }
+}
+@media (max-width: 768px) {
     .hero-stats { gap: 24px; }
     .form-row { grid-template-columns: 1fr; }
     .auth-right { padding: 40px 24px; }
@@ -1353,3 +1400,224 @@ textarea.form-control { resize: vertical; min-height: 120px; }
     animation: shimmer 1.5s infinite;
     border-radius: var(--radius-sm);
 }
+
+/* ============================================================
+   MODUL HOTEL & RESTORAN — Card, Detail, Rekomendasi
+   ============================================================ */
+
+/* ── Section rekomendasi di halaman detail wisata ── */
+.recommend-section {
+    margin-bottom: 28px;
+}
+.recommend-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 8px;
+}
+.recommend-title {
+    font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
+    color: var(--gray-900); display: flex; align-items: center; gap: 10px;
+}
+.recommend-scroll {
+    display: flex; gap: 16px; overflow-x: auto; padding-bottom: 8px;
+    scroll-snap-type: x proximity;
+}
+.recommend-scroll::-webkit-scrollbar { height: 6px; }
+.recommend-scroll::-webkit-scrollbar-thumb { background: var(--blue-200); border-radius: 4px; }
+.recommend-scroll::-webkit-scrollbar-track { background: var(--gray-50); }
+
+/* ── Card kecil untuk hotel/restoran rekomendasi ── */
+.mini-card {
+    flex: 0 0 260px; scroll-snap-align: start;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition-bounce);
+}
+.mini-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 40px rgba(14,165,233,.18);
+    border-color: var(--blue-200);
+}
+.mini-card-img {
+    height: 140px; position: relative; overflow: hidden;
+    background: linear-gradient(135deg, var(--blue-100), var(--cyan-100));
+}
+.mini-card-img img { width:100%; height:100%; object-fit:cover; transition: transform .5s; }
+.mini-card:hover .mini-card-img img { transform: scale(1.08); }
+.mini-card-img-placeholder {
+    width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+    color: var(--blue-300); font-size: 2rem;
+}
+.mini-card-badge {
+    position:absolute; top:10px; left:10px;
+    background: rgba(12,35,64,.7); color:white; font-size:.68rem; font-weight:700;
+    padding:3px 10px; border-radius:999px; backdrop-filter:blur(4px);
+}
+.mini-card-body { padding: 14px 16px; }
+.mini-card-name {
+    font-weight: 700; color: var(--gray-900); font-size: .92rem;
+    margin-bottom: 4px; line-height: 1.3;
+    display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden;
+}
+.mini-card-location {
+    font-size: .76rem; color: var(--gray-400); margin-bottom: 8px;
+    display:flex; align-items:center; gap:5px;
+}
+.mini-card-meta {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom: 10px;
+}
+.mini-card-price { font-weight: 700; color: var(--cyan-700); font-size: .85rem; }
+.mini-card-rating { font-size: .8rem; color: var(--gold); display:flex; align-items:center; gap:4px; }
+.mini-card-rating span { color: var(--gray-400); font-size: .72rem; }
+.mini-card-btn {
+    display:block; text-align:center; width:100%;
+    padding: 8px 0; border-radius: var(--radius-full);
+    background: linear-gradient(135deg, var(--blue-500), var(--cyan-500));
+    color:white; font-size: .82rem; font-weight:600;
+    transition: var(--transition);
+}
+.mini-card-btn:hover { box-shadow: 0 6px 18px rgba(14,165,233,.4); transform: translateY(-1px); }
+
+.recommend-empty {
+    padding: 24px; text-align:center; color: var(--gray-400);
+    background: var(--gray-50); border-radius: var(--radius-md);
+    font-size: .88rem;
+}
+
+/* ── Listing grid (hotel.php / restoran.php) ── */
+.lodging-card {
+    background: white; border-radius: var(--radius-lg); overflow:hidden;
+    border: 1px solid var(--gray-100); box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+.lodging-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-xl); }
+.lodging-img-wrap { height: 200px; position:relative; overflow:hidden; }
+.lodging-img-wrap img { width:100%; height:100%; object-fit:cover; transition:transform .5s; }
+.lodging-card:hover .lodging-img-wrap img { transform:scale(1.08); }
+.lodging-img-placeholder {
+    width:100%; height:100%;
+    background: linear-gradient(135deg, var(--cyan-100), var(--green-100));
+    display:flex; align-items:center; justify-content:center;
+    color: var(--cyan-500); font-size:2.5rem;
+}
+.lodging-category-badge {
+    position:absolute; top:12px; left:12px;
+    background: linear-gradient(135deg, var(--cyan-500), var(--blue-500));
+    color:white; font-size:.72rem; font-weight:700; padding:4px 12px; border-radius:999px;
+}
+
+/* ── Detail page hotel/restoran ── */
+.lodging-hero {
+    height: 50vh; min-height:340px; position:relative; overflow:hidden;
+    background: linear-gradient(135deg, var(--blue-800), var(--cyan-700));
+}
+.lodging-hero img { width:100%; height:100%; object-fit:cover; opacity:.85; }
+.lodging-hero::after {
+    content:''; position:absolute; bottom:0; left:0; right:0; height:55%;
+    background: linear-gradient(to top, rgba(12,35,64,.92), transparent);
+}
+.lodging-hero-info { position:absolute; bottom:0; left:0; right:0; z-index:2; padding:36px; color:white; }
+
+/* ── Glassmorphism panel umum (dipakai navbar search & filter) ── */
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+}
+
+/* ============================================================
+   GLOBAL SEARCH (Navbar)
+   ============================================================ */
+.global-search-wrap {
+    position: relative;
+    flex: 1; max-width: 360px;
+    margin: 0 12px;
+}
+.global-search-input {
+    width: 100%; padding: 9px 16px 9px 38px;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(255,255,255,.25);
+    background: rgba(255,255,255,.12);
+    backdrop-filter: blur(8px);
+    color: white; font-size: .85rem;
+    transition: var(--transition);
+}
+.global-search-input::placeholder { color: rgba(255,255,255,.6); }
+.global-search-input:focus {
+    background: rgba(255,255,255,.95); color: var(--gray-800);
+    border-color: var(--blue-300);
+}
+.global-search-input:focus::placeholder { color: var(--gray-400); }
+.global-search-icon {
+    position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    color: rgba(255,255,255,.7); font-size: .82rem; pointer-events:none;
+    transition: var(--transition);
+}
+.global-search-input:focus ~ .global-search-icon { color: var(--gray-400); }
+
+.global-search-dropdown {
+    position: absolute; top: calc(100% + 10px); left:0; right:0;
+    background: white; border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xl); border: 1px solid var(--gray-100);
+    max-height: 420px; overflow-y: auto; z-index: 1100;
+    opacity:0; visibility:hidden; transform: translateY(-8px);
+    transition: var(--transition);
+}
+.global-search-dropdown.open { opacity:1; visibility:visible; transform:translateY(0); }
+.gsd-group-title {
+    font-size: .7rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em;
+    color: var(--gray-400); padding: 10px 16px 4px;
+}
+.gsd-item {
+    display:flex; align-items:center; gap:10px; padding:10px 16px;
+    transition: var(--transition); cursor:pointer; color: var(--gray-700);
+}
+.gsd-item:hover { background: var(--blue-50); }
+.gsd-item-icon {
+    width:32px; height:32px; border-radius:8px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:.8rem; color:white;
+}
+.gsd-icon-wisata { background: linear-gradient(135deg,var(--blue-400),var(--blue-600)); }
+.gsd-icon-hotel  { background: linear-gradient(135deg,var(--cyan-500),var(--cyan-700)); }
+.gsd-icon-resto  { background: linear-gradient(135deg,var(--green-400),var(--green-600)); }
+.gsd-item-name { font-size: .86rem; font-weight:600; }
+.gsd-item-sub  { font-size: .72rem; color: var(--gray-400); }
+.gsd-empty { padding: 24px 16px; text-align:center; color:var(--gray-400); font-size:.85rem; }
+.gsd-footer {
+    padding: 10px 16px; text-align:center; border-top:1px solid var(--gray-100);
+}
+.gsd-footer a { font-size:.82rem; font-weight:600; color: var(--blue-600); }
+
+/* NOTE: search bar show/hide breakpoint is unified with the navbar
+   drawer breakpoint (1024px) in the RESPONSIVE section above —
+   this avoids the overlap bug where two search boxes rendered
+   at once between 768px–900px. */
+
+/* ============================================================
+   SEARCH RESULTS PAGE (search.php)
+   ============================================================ */
+.search-result-tabs {
+    display:flex; gap:8px; flex-wrap:wrap; margin-bottom:24px;
+}
+.search-result-group { margin-bottom: 40px; }
+.search-result-group-title {
+    display:flex; align-items:center; gap:10px;
+    font-family: var(--font-display); font-size:1.25rem; font-weight:800;
+    margin-bottom:18px; color: var(--gray-900);
+}
+.search-result-group-title .count-pill {
+    background: var(--blue-100); color: var(--blue-700);
+    font-size:.78rem; font-weight:700; padding:3px 12px; border-radius:999px;
+}
+
+/* ============================================================
+   ADMIN: Hotel & Restoran management — reuse data-table styles
+   tambahan kecil untuk badge kategori baru
+   ============================================================ */
+.badge-cyan { background: var(--cyan-100); color: var(--cyan-700); }

@@ -16,6 +16,28 @@ if (!$wisata) { header('Location: wisata.php'); exit; }
 // Get photos
 $photos = $db->query("SELECT * FROM wisata_foto WHERE wisata_id = $id ORDER BY is_primary DESC, id ASC")->fetch_all(MYSQLI_ASSOC);
 
+// Rekomendasi Hotel terdekat (berdasarkan wisata_terdekat_id)
+$recommendedHotels = $db->query("
+    SELECT h.*, COALESCE(AVG(hr.rating),0) as avg_rating, COUNT(DISTINCT hr.id) as total_rating
+    FROM hotel h
+    LEFT JOIN hotel_rating hr ON hr.hotel_id = h.id
+    WHERE h.wisata_terdekat_id = $id
+    GROUP BY h.id
+    ORDER BY avg_rating DESC
+    LIMIT 6
+")->fetch_all(MYSQLI_ASSOC);
+
+// Rekomendasi Restoran terdekat (berdasarkan wisata_terdekat_id)
+$recommendedRestorans = $db->query("
+    SELECT r.*, COALESCE(AVG(rr.rating),0) as avg_rating, COUNT(DISTINCT rr.id) as total_rating
+    FROM restoran r
+    LEFT JOIN restoran_rating rr ON rr.restoran_id = r.id
+    WHERE r.wisata_terdekat_id = $id
+    GROUP BY r.id
+    ORDER BY avg_rating DESC
+    LIMIT 6
+")->fetch_all(MYSQLI_ASSOC);
+
 // Rating
 $ratingData = getAvgRating($id);
 $avgRating = round($ratingData['avg_r'] ?? $wisata['rating_awal'], 1);
@@ -204,6 +226,94 @@ $price = $wisata['harga_tiket'] > 0 ? 'Rp ' . number_format($wisata['harga_tiket
                     <i class="fas fa-info-circle" style="color:var(--blue-400)"></i> Tentang Tempat Ini
                 </h3>
                 <p style="color:var(--gray-700);line-height:1.85;font-size:0.95rem"><?= nl2br(htmlspecialchars($wisata['deskripsi'])) ?></p>
+            </div>
+
+            <!-- Rekomendasi Penginapan -->
+            <div class="recommend-section">
+                <div class="recommend-header">
+                    <div class="recommend-title">
+                        <i class="fas fa-hotel" style="color:var(--cyan-600)"></i> Rekomendasi Penginapan
+                    </div>
+                    <?php if (!empty($recommendedHotels)): ?>
+                        <a href="hotel.php" style="font-size:.82rem;color:var(--cyan-600);font-weight:600">Lihat Semua Hotel →</a>
+                    <?php endif; ?>
+                </div>
+                <?php if (empty($recommendedHotels)): ?>
+                    <div class="recommend-empty">
+                        <i class="fas fa-hotel" style="font-size:1.6rem;display:block;margin-bottom:8px;color:var(--gray-300)"></i>
+                        Belum ada rekomendasi penginapan untuk wisata ini.
+                    </div>
+                <?php else: ?>
+                    <div class="recommend-scroll">
+                        <?php foreach ($recommendedHotels as $h):
+                            $hAvg = round($h['avg_rating'],1);
+                        ?>
+                        <div class="mini-card">
+                            <div class="mini-card-img">
+                                <?php if ($h['foto']): ?>
+                                    <img src="uploads/<?= htmlspecialchars($h['foto']) ?>" alt="<?= htmlspecialchars($h['nama_hotel']) ?>" loading="lazy">
+                                <?php else: ?>
+                                    <div class="mini-card-img-placeholder"><i class="fas fa-hotel"></i></div>
+                                <?php endif; ?>
+                                <div class="mini-card-badge"><?= htmlspecialchars($h['lokasi']) ?></div>
+                            </div>
+                            <div class="mini-card-body">
+                                <div class="mini-card-name"><?= htmlspecialchars($h['nama_hotel']) ?></div>
+                                <div class="mini-card-location"><i class="fas fa-bed"></i> Penginapan</div>
+                                <div class="mini-card-meta">
+                                    <span class="mini-card-price">Rp <?= number_format($h['harga_per_malam'],0,',','.') ?>/malam</span>
+                                    <span class="mini-card-rating">★ <?= $hAvg ?> <span>(<?= $h['total_rating'] ?>)</span></span>
+                                </div>
+                                <a href="hotel_detail.php?id=<?= $h['id'] ?>" class="mini-card-btn">Detail</a>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Rekomendasi Tempat Makan -->
+            <div class="recommend-section">
+                <div class="recommend-header">
+                    <div class="recommend-title">
+                        <i class="fas fa-utensils" style="color:var(--green-600)"></i> Rekomendasi Tempat Makan
+                    </div>
+                    <?php if (!empty($recommendedRestorans)): ?>
+                        <a href="restoran.php" style="font-size:.82rem;color:var(--green-600);font-weight:600">Lihat Semua Restoran →</a>
+                    <?php endif; ?>
+                </div>
+                <?php if (empty($recommendedRestorans)): ?>
+                    <div class="recommend-empty">
+                        <i class="fas fa-utensils" style="font-size:1.6rem;display:block;margin-bottom:8px;color:var(--gray-300)"></i>
+                        Belum ada rekomendasi tempat makan untuk wisata ini.
+                    </div>
+                <?php else: ?>
+                    <div class="recommend-scroll">
+                        <?php foreach ($recommendedRestorans as $r):
+                            $rAvg = round($r['avg_rating'],1);
+                        ?>
+                        <div class="mini-card">
+                            <div class="mini-card-img">
+                                <?php if ($r['foto']): ?>
+                                    <img src="uploads/<?= htmlspecialchars($r['foto']) ?>" alt="<?= htmlspecialchars($r['nama_restoran']) ?>" loading="lazy">
+                                <?php else: ?>
+                                    <div class="mini-card-img-placeholder" style="background:linear-gradient(135deg,var(--green-100),var(--cyan-100));color:var(--green-500)"><i class="fas fa-utensils"></i></div>
+                                <?php endif; ?>
+                                <div class="mini-card-badge"><?= htmlspecialchars($r['lokasi']) ?></div>
+                            </div>
+                            <div class="mini-card-body">
+                                <div class="mini-card-name"><?= htmlspecialchars($r['nama_restoran']) ?></div>
+                                <div class="mini-card-location"><i class="fas fa-utensils"></i> Tempat Makan</div>
+                                <div class="mini-card-meta">
+                                    <span class="mini-card-price">Rp <?= number_format($r['harga_rata_rata'],0,',','.') ?>/porsi</span>
+                                    <span class="mini-card-rating">★ <?= $rAvg ?> <span>(<?= $r['total_rating'] ?>)</span></span>
+                                </div>
+                                <a href="restoran_detail.php?id=<?= $r['id'] ?>" class="mini-card-btn" style="background:linear-gradient(135deg,var(--green-500),var(--cyan-500))">Detail</a>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <!-- Rating Section -->
