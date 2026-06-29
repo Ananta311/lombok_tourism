@@ -27,12 +27,13 @@ $orderBy = match($sort) {
     default      => 'avg_rating DESC'
 };
 
-$sql = "SELECT h.*,
+$sql = "SELECT h.*, hf.foto as foto_utama,
         COALESCE(AVG(hr.rating),0) as avg_rating,
         COUNT(DISTINCT hr.id) as total_rating,
         tw.nama as wisata_nama
         FROM hotel h
         LEFT JOIN hotel_rating hr ON hr.hotel_id = h.id
+        LEFT JOIN hotel_foto hf ON hf.hotel_id = h.id AND hf.is_primary = 1
         LEFT JOIN tempat_wisata tw ON tw.id = h.wisata_terdekat_id
         $where
         GROUP BY h.id
@@ -103,8 +104,8 @@ include __DIR__ . '/includes/header.php';
                 ?>
                 <div class="lodging-card" data-reveal data-delay="<?= $i % 3 ?>">
                     <div class="lodging-img-wrap">
-                        <?php if ($h['foto']): ?>
-                            <img src="uploads/<?= htmlspecialchars($h['foto']) ?>" alt="<?= htmlspecialchars($h['nama_hotel']) ?>" loading="lazy">
+                        <?php if ($h['foto_utama']): ?>
+                            <img src="uploads/<?= htmlspecialchars($h['foto_utama']) ?>" alt="<?= htmlspecialchars($h['nama_hotel']) ?>" loading="lazy">
                         <?php else: ?>
                             <div class="lodging-img-placeholder"><i class="fas fa-hotel"></i></div>
                         <?php endif; ?>

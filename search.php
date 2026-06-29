@@ -27,9 +27,10 @@ if (strlen($q) >= 1) {
     $wisataResults = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
     $stmt = $db->prepare("
-        SELECT h.*, COALESCE(AVG(hr.rating),0) as avg_rating, COUNT(DISTINCT hr.id) as total_rating
+        SELECT h.*, hf.foto as foto_utama, COALESCE(AVG(hr.rating),0) as avg_rating, COUNT(DISTINCT hr.id) as total_rating
         FROM hotel h
         LEFT JOIN hotel_rating hr ON hr.hotel_id = h.id
+        LEFT JOIN hotel_foto hf ON hf.hotel_id = h.id AND hf.is_primary = 1
         WHERE h.nama_hotel LIKE ? OR h.lokasi LIKE ? OR h.deskripsi LIKE ?
         GROUP BY h.id
         ORDER BY avg_rating DESC
@@ -39,9 +40,10 @@ if (strlen($q) >= 1) {
     $hotelResults = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
     $stmt = $db->prepare("
-        SELECT r.*, COALESCE(AVG(rr.rating),0) as avg_rating, COUNT(DISTINCT rr.id) as total_rating
+        SELECT r.*, rf.foto as foto_utama, COALESCE(AVG(rr.rating),0) as avg_rating, COUNT(DISTINCT rr.id) as total_rating
         FROM restoran r
         LEFT JOIN restoran_rating rr ON rr.restoran_id = r.id
+        LEFT JOIN restoran_foto rf ON rf.restoran_id = r.id AND rf.is_primary = 1
         WHERE r.nama_restoran LIKE ? OR r.lokasi LIKE ? OR r.deskripsi LIKE ?
         GROUP BY r.id
         ORDER BY avg_rating DESC

@@ -21,34 +21,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (strlen($lokasi) < 2) {
         $error = 'Lokasi wajib diisi.';
     } else {
-        $fotoName = null;
-        if (!empty($_FILES['foto']['name']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
-            $up = uploadFile($_FILES['foto'], 'restoran');
-            if (isset($up['error'])) {
-                $error = $up['error'];
-            } else {
-                $fotoName = $up['filename'];
-            }
-        }
+        // ── INSERT restoran (foto utama diisi belakangan dari foto pertama) ──
+        $ins = $db->prepare("
+            INSERT INTO restoran
+                (nama_restoran, lokasi, alamat, deskripsi, harga_rata_rata,
+                 link_lokasi, wisata_terdekat_id, admin_id)
+            VALUES (?,?,?,?,?,?,?,?)
+        ");
+        $ins->bind_param(
+            "ssssdsii",
+            $nama_restoran, $lokasi, $alamat, $deskripsi, $harga,
+            $link_lokasi, $wisataId, $adminId
+        );
 
-        if (!$error) {
-            $ins = $db->prepare("
-                INSERT INTO restoran
-                    (nama_restoran, lokasi, alamat, deskripsi, harga_rata_rata, foto,
-                     link_lokasi, wisata_terdekat_id, admin_id)
-                VALUES (?,?,?,?,?,?,?,?,?)
-            ");
-            $ins->bind_param(
-                "ssssdssii",
-                $nama_restoran, $lokasi, $alamat, $deskripsi, $harga, $fotoName,
-                $link_lokasi, $wisataId, $adminId
-            );
-            if ($ins->execute()) {
-                header('Location: restoran.php?msg=added');
-                exit;
-            } else {
-                $error = 'Gagal menyimpan: ' . $ins->error;
+        if (!$ins->execute()) {
+            $error = 'Gagal menyimpan restoran: ' . $ins->error;
+        } else {
+            $restoranId = $db->insert_id;
+            $isPrimary  = 1; // foto pertama = foto utama
+            $firstFoto  = null;
+
+            // ── Upload foto-foto (pola sama persis dengan modul Wisata) ──
+            if (!empty($_FILES['fotos']['name'][0])) {
+                $uploadDir = UPLOAD_DIR . 'restoran/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0775, true);
+                }
+
+                $captions = $_POST['captions'] ?? [];
+                foreach ($_FILES['fotos']['tmp_name'] as $k => $tmp) {
+                    if (empty($tmp) || $_FILES['fotos']['error'][$k] !== UPLOAD_ERR_OK) continue;
+
+                    $file = [
+                        'name'     => $_FILES['fotos']['name'][$k],
+                        'type'     => $_FILES['fotos']['type'][$k],
+                        'tmp_name' => $tmp,
+                        'size'     => $_FILES['fotos']['size'][$k],
+                        'error'    => $_FILES['fotos']['error'][$k],
+                    ];
+                    $up = uploadFile($file, 'restoran');
+                    if (isset($up['success'])) {
+                        $fn      = $up['filename'];
+                        $caption = sanitize($captions[$k] ?? '');
+                        $ps = $db->prepare(
+                            "INSERT INTO restoran_foto (restoran_id, foto, caption, is_primary)
+                             VALUES (?, ?, ?, ?)"
+                        );
+                        $ps->bind_param("issi", $restoranId, $fn, $caption, $isPrimary);
+                        $ps->execute();
+
+                        if ($isPrimary) $firstFoto = $fn;
+                        $isPrimary = 0; // hanya foto pertama yang jadi utama
+                    }
+                }
+
+                // Simpan foto pertama juga ke kolom `foto` di tabel restoran,
+                // supaya kartu listing (restoran.php, search.php, dll) tetap
+                // bisa menampilkan thumbnail tanpa JOIN tambahan.
+                if ($firstFoto) {
+                    $upd = $db->prepare("UPDATE restoran SET foto = ? WHERE id = ?");
+                    $upd->bind_param("si", $firstFoto, $restoranId);
+                    $upd->execute();
+                }
             }
+
+            header('Location: restoran.php?msg=added');
+            exit;
         }
     }
 }
@@ -140,13 +178,16 @@ include __DIR__ . '/admin_header.php';
 
                 <div class="form-card">
                     <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--gray-100)">
-                        <i class="fas fa-image" style="color:var(--green-600)"></i> Foto Restoran
+                        <i class="fas fa-images" style="color:var(--green-600)"></i> Foto-foto Restoran
                     </h3>
-                    <div class="file-upload-area">
-                        <input type="file" name="foto" id="restoFotoInput" accept="image/*">
+                    <p style="font-size:.85rem;color:var(--gray-500);margin-bottom:16px">
+                        Upload minimal 1 foto. Foto pertama akan dijadikan foto utama. Bisa pilih beberapa foto sekaligus. Maks 5MB per foto.
+                    </p>
+                    <div class="file-upload-area" id="restoFotoDropzone">
+                        <input type="file" name="fotos[]" id="restoFotoInput" multiple accept="image/*">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <p><strong>Klik atau seret foto ke sini</strong></p>
-                        <p style="font-size:.8rem;color:var(--gray-400);margin-top:4px">JPG, PNG, WebP — maks 5MB</p>
+                        <p style="font-size:.8rem;color:var(--gray-400);margin-top:4px">JPG, PNG, WebP — maks 5MB per file</p>
                     </div>
                     <div class="preview-grid" id="restoFotoPreview"></div>
                 </div>
@@ -163,17 +204,5 @@ include __DIR__ . '/admin_header.php';
         </div>
     </form>
 </div>
-
-<script>
-document.getElementById('restoFotoInput')?.addEventListener('change', function(){
-    const grid = document.getElementById('restoFotoPreview');
-    grid.innerHTML = '';
-    if (this.files[0]) {
-        const reader = new FileReader();
-        reader.onload = e => { grid.innerHTML = `<div class="preview-item"><img src="${e.target.result}"></div>`; };
-        reader.readAsDataURL(this.files[0]);
-    }
-});
-</script>
 
 <?php include __DIR__ . '/admin_footer.php'; ?>

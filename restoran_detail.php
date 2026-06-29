@@ -13,6 +13,9 @@ $restoran = $db->query("
 ")->fetch_assoc();
 if (!$restoran) { header('Location: restoran.php'); exit; }
 
+// Galeri foto (pola sama dengan modul Wisata)
+$photos = $db->query("SELECT * FROM restoran_foto WHERE restoran_id = $id ORDER BY is_primary DESC, id ASC")->fetch_all(MYSQLI_ASSOC);
+
 $msg = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'review') {
@@ -78,8 +81,9 @@ $mapsLink = $restoran['link_lokasi'] ?? '';
 <div style="padding-top:72px; min-height:100vh; background:var(--gray-50)">
 
 <div class="lodging-hero">
-    <?php if ($restoran['foto']): ?>
-        <img src="uploads/<?= htmlspecialchars($restoran['foto']) ?>" alt="<?= htmlspecialchars($restoran['nama_restoran']) ?>">
+    <?php $mainPhoto = $photos[0] ?? null; ?>
+    <?php if ($mainPhoto): ?>
+        <img src="uploads/<?= htmlspecialchars($mainPhoto['foto']) ?>" alt="<?= htmlspecialchars($restoran['nama_restoran']) ?>">
     <?php else: ?>
         <div style="width:100%;height:100%;background:linear-gradient(135deg,var(--green-700),var(--cyan-700));display:flex;align-items:center;justify-content:center;font-size:5rem;color:rgba(255,255,255,.3)"><i class="fas fa-utensils"></i></div>
     <?php endif; ?>
@@ -113,6 +117,37 @@ $mapsLink = $restoran['link_lokasi'] ?? '';
                     <i class="fas fa-<?= $msg['type']==='success'?'check-circle':'exclamation-circle' ?>"></i>
                     <?= htmlspecialchars($msg['text']) ?>
                 </div>
+            <?php endif; ?>
+
+            <!-- Gallery -->
+            <?php if (count($photos) > 0): ?>
+            <div class="form-card" style="padding:24px;margin-bottom:28px">
+                <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;margin-bottom:16px">
+                    <i class="fas fa-images" style="color:var(--green-600)"></i> Galeri Foto
+                </h3>
+                <div class="photo-gallery">
+                    <div class="gallery-main">
+                        <img src="uploads/<?= htmlspecialchars($photos[0]['foto']) ?>" alt="gallery main" id="galleryMainImg" data-lightbox="uploads/<?= htmlspecialchars($photos[0]['foto']) ?>">
+                    </div>
+                    <?php if (count($photos) > 1): ?>
+                    <div class="gallery-thumbs" style="margin-top:8px">
+                        <?php foreach (array_slice($photos, 0, 4) as $pi => $pho): ?>
+                            <?php $isLast = $pi === 3 && count($photos) > 4; ?>
+                            <?php if ($isLast): ?>
+                                <div class="gallery-more" data-lightbox="uploads/<?= htmlspecialchars($pho['foto']) ?>">
+                                    <img src="uploads/<?= htmlspecialchars($pho['foto']) ?>">
+                                    <div class="gallery-more-overlay">+<?= count($photos)-4 ?></div>
+                                </div>
+                            <?php else: ?>
+                                <div class="gallery-thumb" onclick="document.getElementById('galleryMainImg').src='uploads/<?= htmlspecialchars($pho['foto']) ?>';document.getElementById('galleryMainImg').dataset.lightbox='uploads/<?= htmlspecialchars($pho['foto']) ?>'">
+                                    <img src="uploads/<?= htmlspecialchars($pho['foto']) ?>" alt="foto <?= $pi+1 ?>">
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
             <?php endif; ?>
 
             <div class="form-card" style="padding:28px;margin-bottom:28px">
@@ -290,6 +325,14 @@ $mapsLink = $restoran['link_lokasi'] ?? '';
         </div>
     </div>
 </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+    <div class="lightbox-inner">
+        <button class="lightbox-close" id="lightboxClose"><i class="fas fa-times"></i></button>
+        <img src="" id="lightboxImg" alt="">
+    </div>
 </div>
 
 <script>

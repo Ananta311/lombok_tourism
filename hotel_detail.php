@@ -13,6 +13,9 @@ $hotel = $db->query("
 ")->fetch_assoc();
 if (!$hotel) { header('Location: hotel.php'); exit; }
 
+// Galeri foto (pola sama dengan modul Wisata)
+$photos = $db->query("SELECT * FROM hotel_foto WHERE hotel_id = $id ORDER BY is_primary DESC, id ASC")->fetch_all(MYSQLI_ASSOC);
+
 $msg = '';
 
 /* Submit rating + komentar (1 form gabungan, upsert) */
@@ -82,8 +85,9 @@ $mapsLink = $hotel['link_lokasi'] ?? '';
 <div style="padding-top:72px; min-height:100vh; background:var(--gray-50)">
 
 <div class="lodging-hero">
-    <?php if ($hotel['foto']): ?>
-        <img src="uploads/<?= htmlspecialchars($hotel['foto']) ?>" alt="<?= htmlspecialchars($hotel['nama_hotel']) ?>">
+    <?php $mainPhoto = $photos[0] ?? null; ?>
+    <?php if ($mainPhoto): ?>
+        <img src="uploads/<?= htmlspecialchars($mainPhoto['foto']) ?>" alt="<?= htmlspecialchars($hotel['nama_hotel']) ?>">
     <?php else: ?>
         <div style="width:100%;height:100%;background:linear-gradient(135deg,var(--cyan-700),var(--blue-700));display:flex;align-items:center;justify-content:center;font-size:5rem;color:rgba(255,255,255,.3)"><i class="fas fa-hotel"></i></div>
     <?php endif; ?>
@@ -117,6 +121,37 @@ $mapsLink = $hotel['link_lokasi'] ?? '';
                     <i class="fas fa-<?= $msg['type']==='success'?'check-circle':'exclamation-circle' ?>"></i>
                     <?= htmlspecialchars($msg['text']) ?>
                 </div>
+            <?php endif; ?>
+
+            <!-- Gallery -->
+            <?php if (count($photos) > 0): ?>
+            <div class="form-card" style="padding:24px;margin-bottom:28px">
+                <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;margin-bottom:16px">
+                    <i class="fas fa-images" style="color:var(--cyan-600)"></i> Galeri Foto
+                </h3>
+                <div class="photo-gallery">
+                    <div class="gallery-main">
+                        <img src="uploads/<?= htmlspecialchars($photos[0]['foto']) ?>" alt="gallery main" id="galleryMainImg" data-lightbox="uploads/<?= htmlspecialchars($photos[0]['foto']) ?>">
+                    </div>
+                    <?php if (count($photos) > 1): ?>
+                    <div class="gallery-thumbs" style="margin-top:8px">
+                        <?php foreach (array_slice($photos, 0, 4) as $pi => $pho): ?>
+                            <?php $isLast = $pi === 3 && count($photos) > 4; ?>
+                            <?php if ($isLast): ?>
+                                <div class="gallery-more" data-lightbox="uploads/<?= htmlspecialchars($pho['foto']) ?>">
+                                    <img src="uploads/<?= htmlspecialchars($pho['foto']) ?>">
+                                    <div class="gallery-more-overlay">+<?= count($photos)-4 ?></div>
+                                </div>
+                            <?php else: ?>
+                                <div class="gallery-thumb" onclick="document.getElementById('galleryMainImg').src='uploads/<?= htmlspecialchars($pho['foto']) ?>';document.getElementById('galleryMainImg').dataset.lightbox='uploads/<?= htmlspecialchars($pho['foto']) ?>'">
+                                    <img src="uploads/<?= htmlspecialchars($pho['foto']) ?>" alt="foto <?= $pi+1 ?>">
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
             <?php endif; ?>
 
             <div class="form-card" style="padding:28px;margin-bottom:28px">
@@ -297,6 +332,14 @@ $mapsLink = $hotel['link_lokasi'] ?? '';
         </div>
     </div>
 </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+    <div class="lightbox-inner">
+        <button class="lightbox-close" id="lightboxClose"><i class="fas fa-times"></i></button>
+        <img src="" id="lightboxImg" alt="">
+    </div>
 </div>
 
 <script>
